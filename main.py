@@ -46,6 +46,11 @@ class InvoiceDialog(QDialog):
         scan_btn.clicked.connect(self.add_item)
         layout.addWidget(scan_btn)
 
+        # ————— 수동 항목 추가 버튼 —————
+        manual_btn = QPushButton("수동 항목 추가")
+        manual_btn.clicked.connect(self.manual_add_item)
+        layout.addWidget(manual_btn)
+
         # 청구서 생성 버튼
         gen_btn = QPushButton("청구서 생성")
         gen_btn.clicked.connect(self.generate_invoice)
@@ -94,6 +99,55 @@ class InvoiceDialog(QDialog):
         QMessageBox.information(self, "완료", f"청구서 엑셀 파일 생성:\n{filepath}")
         self.invoice_items.clear()
         self.table.setRowCount(0)
+
+    def manual_add_item(self):
+        """
+        기존 등록된 물품을 드롭다운에서 선택해
+        청구 리스트에 수동으로 추가합니다.
+        """
+        # 1) DB에서 물품 목록 조회
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT item_name, item_code FROM inventory")
+        items = cur.fetchall()
+        conn.close()
+
+        if not items:
+            QMessageBox.information(self, "알림", "등록된 물품이 없습니다.")
+            return
+
+        # 2) 선택지 생성
+        choices = [f"{n} ({c})" for n, c in items]
+        choice, ok = QInputDialog.getItem(
+            self,
+            "물품 선택",
+            "추가할 물품을 선택하세요:",
+            choices,
+            editable=False
+        )
+        if not ok:
+            return
+
+        # 3) 선택된 인덱스로 원본 데이터 가져오기
+        idx = choices.index(choice)
+        name, code = items[idx]
+
+        # 4) 청구 수량 입력
+        qty, ok = QInputDialog.getInt(
+            self,
+            "수량 입력",
+            f"{name} 청구 수량을 입력하세요:"
+        )
+        if not ok or qty <= 0:
+            return
+
+        # 5) 리스트 및 테이블에 추가
+        self.invoice_items.append({"item_name": name, "item_code": code, "qty": qty})
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(name))
+        self.table.setItem(row, 1, QTableWidgetItem(code))
+        self.table.setItem(row, 2, QTableWidgetItem(str(qty)))
 
 class MainWindow(QMainWindow):
     def __init__(self):
