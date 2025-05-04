@@ -213,6 +213,11 @@ class MainWindow(QMainWindow):
         invoice_btn.clicked.connect(self.open_invoice_dialog)
         form.addRow(invoice_btn)
 
+        # ————— 청구 이력 보기 버튼 —————
+        history_btn = QPushButton("청구 이력 보기")
+        history_btn.clicked.connect(self.show_request_log)
+        form.addRow(history_btn)
+
         container.setLayout(form)
         self.setCentralWidget(container)
 
@@ -370,6 +375,33 @@ class MainWindow(QMainWindow):
 
     def open_invoice_dialog(self):
         dlg = InvoiceDialog(self)
+        dlg.exec()
+
+    def show_request_log(self):
+        """
+        request_log 테이블의 모든 청구 이력을 테이블 형태로 다이얼로그에 표시합니다.
+        """
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT item_name, item_code, quantity_requested, request_date FROM request_log"
+        )
+        rows = cur.fetchall()
+        conn.close()
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("청구 이력")
+        layout = QVBoxLayout(dlg)
+        table = QTableWidget(len(rows), 4)
+        table.setHorizontalHeaderLabels(["물품명", "코드", "수량", "청구일시"])
+
+        for i, (name, code, qty, date) in enumerate(rows):
+            table.setItem(i, 0, QTableWidgetItem(name))
+            table.setItem(i, 1, QTableWidgetItem(code))
+            table.setItem(i, 2, QTableWidgetItem(str(qty)))
+            table.setItem(i, 3, QTableWidgetItem(date))
+
+        layout.addWidget(table)
         dlg.exec()
 
 # 앱 실행 진입점
