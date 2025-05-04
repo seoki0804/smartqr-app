@@ -1,4 +1,5 @@
 # File: smartqr-app/main.py
+# File: smartqr-app/main.py
 
 import os
 import sys
@@ -51,6 +52,11 @@ class MainWindow(QMainWindow):
         view_btn = QPushButton("재고 현황 보기")
         view_btn.clicked.connect(self.show_inventory)
         form.addRow(view_btn)
+
+        # ————— 재고 현황 Excel 내보내기 버튼 —————
+        export_inv_btn = QPushButton("재고현황 → Excel")
+        export_inv_btn.clicked.connect(self.export_inventory)
+        form.addRow(export_inv_btn)
 
         container.setLayout(form)
         self.setCentralWidget(container)
@@ -160,6 +166,51 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(table)
         dlg.exec()
+
+    def export_inventory(self):
+        """
+        inventory 테이블 전체를 Excel(.xlsx) 파일로 내보냅니다.
+        """
+        from openpyxl import Workbook
+        import os
+        from datetime import datetime
+
+        # 1) DB에서 전체 재고 데이터 조회
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT item_name, item_code, total_stock, category, created_at FROM inventory"
+        )
+        rows = cur.fetchall()
+        conn.close()
+
+        # 2) 엑셀 워크북/시트 생성
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "재고현황"
+
+        # 3) 헤더 추가
+        headers = ["물품명", "코드", "수량", "분류", "등록일시"]
+        ws.append(headers)
+
+        # 4) 데이터 추가
+        for name, code, stock, cat, created in rows:
+            ws.append([name, code, stock, cat or "", created])
+
+        # 5) 저장 경로 설정 및 파일 저장
+        save_dir = os.path.join(os.getcwd(), "exports")
+        os.makedirs(save_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"inventory_{timestamp}.xlsx"
+        filepath = os.path.join(save_dir, filename)
+        wb.save(filepath)
+
+        # 6) 완료 메시지 표시
+        QMessageBox.information(
+            self,
+            "완료",
+            f"재고현황이 Excel로 저장되었습니다:\n{filepath}"
+        )
 
 # 앱 실행 진입점
 if __name__ == "__main__":
