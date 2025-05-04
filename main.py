@@ -1,5 +1,4 @@
 # File: smartqr-app/main.py
-# File: smartqr-app/main.py
 
 import os
 import sys
@@ -22,6 +21,79 @@ from datetime import datetime
 
 from utils.db.models import init_db, get_connection
 from utils.qr_tools import scan_qr_from_camera
+
+# ——————— InvoiceDialog class ———————
+class InvoiceDialog(QDialog):
+    """
+    청구서 작성 전용 다이얼로그: 여러 항목을 QR 스캔으로 추가하고
+    한 번에 Excel 청구서를 생성합니다.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("청구서 작성")
+        self.resize(500, 400)
+
+        self.invoice_items = []
+        layout = QVBoxLayout(self)
+
+        # 테이블: 물품명, 코드, 수량
+        self.table = QTableWidget(0, 3)
+        self.table.setHorizontalHeaderLabels(["물품명", "코드", "수량"])
+        layout.addWidget(self.table)
+
+        # QR 스캔을 통한 항목 추가 버튼
+        scan_btn = QPushButton("항목 추가 (QR 스캔)")
+        scan_btn.clicked.connect(self.add_item)
+        layout.addWidget(scan_btn)
+
+        # 청구서 생성 버튼
+        gen_btn = QPushButton("청구서 생성")
+        gen_btn.clicked.connect(self.generate_invoice)
+        layout.addWidget(gen_btn)
+
+    def add_item(self):
+        data = scan_qr_from_camera()
+        if not data:
+            QMessageBox.information(self, "알림", "QR 인식 실패")
+            return
+        name = data.get("item_name")
+        code = data.get("item_code")
+        qty, ok = QInputDialog.getInt(self, "수량 입력", f"{name} 수량:")
+        if not ok or qty <= 0:
+            return
+        self.invoice_items.append({"item_name": name, "item_code": code, "qty": qty})
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(name))
+        self.table.setItem(row, 1, QTableWidgetItem(code))
+        self.table.setItem(row, 2, QTableWidgetItem(str(qty)))
+
+    def generate_invoice(self):
+        if not self.invoice_items:
+            QMessageBox.warning(self, "오류", "청구할 항목이 없습니다.")
+            return
+        from openpyxl import Workbook
+        now_iso = datetime.now().isoformat()
+        conn = get_connection(); cur = conn.cursor()
+        for item in self.invoice_items:
+            cur.execute(
+                "INSERT INTO request_log (item_code, item_name, quantity_requested, request_date) VALUES (?, ?, ?, ?)",
+                (item["item_code"], item["item_name"], item["qty"], now_iso)
+            )
+        conn.commit(); conn.close()
+        wb = Workbook(); ws = wb.active; ws.title = "청구서"
+        ws.append(["물품명", "코드", "청구수량", "작성일시"])
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        for item in self.invoice_items:
+            ws.append([item["item_name"], item["item_code"], item["qty"], ts])
+        save_dir = os.path.join(os.getcwd(), "exports")
+        os.makedirs(save_dir, exist_ok=True)
+        fname = f"invoice_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        filepath = os.path.join(save_dir, fname)
+        wb.save(filepath)
+        QMessageBox.information(self, "완료", f"청구서 엑셀 파일 생성:\n{filepath}")
+        self.invoice_items.clear()
+        self.table.setRowCount(0)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -59,8 +131,8 @@ class MainWindow(QMainWindow):
         form.addRow(export_inv_btn)
 
         # ————— 청구서 생성 버튼 —————
-        invoice_btn = QPushButton("청구서 생성")
-        invoice_btn.clicked.connect(self.generate_invoice)
+        invoice_btn = QPushButton("청구서 작성 창 열기")
+        invoice_btn.clicked.connect(self.open_invoice_dialog)
         form.addRow(invoice_btn)
 
         container.setLayout(form)
@@ -217,66 +289,10 @@ class MainWindow(QMainWindow):
             f"재고현황이 Excel로 저장되었습니다:\n{filepath}"
         )
 
-    def generate_invoice(self):
-        """
-        QR 스캔 또는 선택을 통해 청구할 물품과 수량을 입력한 뒤,
-        회사 양식의 엑셀 청구서를 생성하고 저장합니다.
-        """
-        from openpyxl import Workbook
-        import os
-        from datetime import datetime
 
-        # 1) QR 스캔으로 물품 정보 로드
-        data = scan_qr_from_camera()
-        if not data:
-            QMessageBox.information(self, "알림", "QR 코드 인식에 실패했습니다.")
-            return
-
-        code = data.get("item_code")
-        name = data.get("item_name")
-
-        # 2) 청구 수량 입력
-        qty, ok = QInputDialog.getInt(
-            self,
-            "청구 수량 입력",
-            f"{name} 청구 수량을 입력하세요:"
-        )
-        if not ok or qty <= 0:
-            return
-
-        # 3) DB에 청구 이력 저장
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO request_log (item_code, item_name, quantity_requested, request_date) VALUES (?, ?, ?, ?)",
-            (code, name, qty, datetime.now().isoformat())
-        )
-        conn.commit()
-        conn.close()
-
-        # 4) 엑셀 워크북 생성 및 청구서 양식 작성
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "청구서"
-        # 헤더 (회사 고정 양식 컬럼 순서에 맞추어 배치)
-        headers = ["물품명", "코드", "청구 수량", "작성일시"]
-        ws.append(headers)
-        ws.append([name, code, qty, datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
-
-        # 5) 엑셀 파일 저장
-        save_dir = os.path.join(os.getcwd(), "exports")
-        os.makedirs(save_dir, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"invoice_{timestamp}.xlsx"
-        filepath = os.path.join(save_dir, filename)
-        wb.save(filepath)
-
-        # 6) 완료 메시지
-        QMessageBox.information(
-            self,
-            "완료",
-            f"청구서 엑셀 파일이 생성되었습니다:\n{filepath}"
-        )
+    def open_invoice_dialog(self):
+        dlg = InvoiceDialog(self)
+        dlg.exec()
 
 # 앱 실행 진입점
 if __name__ == "__main__":
