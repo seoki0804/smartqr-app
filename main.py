@@ -51,6 +51,11 @@ class InvoiceDialog(QDialog):
         manual_btn.clicked.connect(self.manual_add_item)
         layout.addWidget(manual_btn)
 
+        # ————— 선택 항목 삭제 버튼 —————
+        delete_btn = QPushButton("항목 삭제")
+        delete_btn.clicked.connect(self.delete_selected_item)
+        layout.addWidget(delete_btn)
+
         # 청구서 생성 버튼
         gen_btn = QPushButton("청구서 생성")
         gen_btn.clicked.connect(self.generate_invoice)
@@ -148,6 +153,25 @@ class InvoiceDialog(QDialog):
         self.table.setItem(row, 0, QTableWidgetItem(name))
         self.table.setItem(row, 1, QTableWidgetItem(code))
         self.table.setItem(row, 2, QTableWidgetItem(str(qty)))
+
+    def delete_selected_item(self):
+        """
+        테이블에서 선택된 행을 삭제하고,
+        invoice_items 리스트에서도 동일 인덱스의 항목을 제거합니다.
+        """
+        # 선택된 행 인덱스 목록 가져오기
+        selected_rows = self.table.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.information(self, "알림", "삭제할 항목을 선택하세요.")
+            return
+
+        # 인덱스를 내림차순으로 정렬해 삭제 (인덱스 밀림 방지)
+        rows = sorted([r.row() for r in selected_rows], reverse=True)
+        for row_index in rows:
+            # 리스트에서도 제거
+            del self.invoice_items[row_index]
+            # 테이블에서도 제거
+            self.table.removeRow(row_index)
 
 class MainWindow(QMainWindow):
     def __init__(self):
