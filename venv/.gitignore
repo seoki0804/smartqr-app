@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+
+# IDE
+.idea/
+*.iml
+
+# Virtualenv
+venv/
+
+# Output folders
+qrcodes/
+exports/
+
+# Database (if you don't want to version data.db)
+data.db
