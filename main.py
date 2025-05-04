@@ -58,6 +58,11 @@ class MainWindow(QMainWindow):
         export_inv_btn.clicked.connect(self.export_inventory)
         form.addRow(export_inv_btn)
 
+        # ————— 청구서 생성 버튼 —————
+        invoice_btn = QPushButton("청구서 생성")
+        invoice_btn.clicked.connect(self.generate_invoice)
+        form.addRow(invoice_btn)
+
         container.setLayout(form)
         self.setCentralWidget(container)
 
@@ -210,6 +215,67 @@ class MainWindow(QMainWindow):
             self,
             "완료",
             f"재고현황이 Excel로 저장되었습니다:\n{filepath}"
+        )
+
+    def generate_invoice(self):
+        """
+        QR 스캔 또는 선택을 통해 청구할 물품과 수량을 입력한 뒤,
+        회사 양식의 엑셀 청구서를 생성하고 저장합니다.
+        """
+        from openpyxl import Workbook
+        import os
+        from datetime import datetime
+
+        # 1) QR 스캔으로 물품 정보 로드
+        data = scan_qr_from_camera()
+        if not data:
+            QMessageBox.information(self, "알림", "QR 코드 인식에 실패했습니다.")
+            return
+
+        code = data.get("item_code")
+        name = data.get("item_name")
+
+        # 2) 청구 수량 입력
+        qty, ok = QInputDialog.getInt(
+            self,
+            "청구 수량 입력",
+            f"{name} 청구 수량을 입력하세요:"
+        )
+        if not ok or qty <= 0:
+            return
+
+        # 3) DB에 청구 이력 저장
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO request_log (item_code, item_name, quantity_requested, request_date) VALUES (?, ?, ?, ?)",
+            (code, name, qty, datetime.now().isoformat())
+        )
+        conn.commit()
+        conn.close()
+
+        # 4) 엑셀 워크북 생성 및 청구서 양식 작성
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "청구서"
+        # 헤더 (회사 고정 양식 컬럼 순서에 맞추어 배치)
+        headers = ["물품명", "코드", "청구 수량", "작성일시"]
+        ws.append(headers)
+        ws.append([name, code, qty, datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+
+        # 5) 엑셀 파일 저장
+        save_dir = os.path.join(os.getcwd(), "exports")
+        os.makedirs(save_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"invoice_{timestamp}.xlsx"
+        filepath = os.path.join(save_dir, filename)
+        wb.save(filepath)
+
+        # 6) 완료 메시지
+        QMessageBox.information(
+            self,
+            "완료",
+            f"청구서 엑셀 파일이 생성되었습니다:\n{filepath}"
         )
 
 # 앱 실행 진입점
