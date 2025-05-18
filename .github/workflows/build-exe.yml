@@ -32,7 +32,7 @@ jobs:
           --add-data "exports;exports"
 
     - name: Upload EXE
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: smartqr-windows-exe
         path: dist/*.exe
