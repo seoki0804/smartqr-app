@@ -1,4 +1,6 @@
-#!/Users/seoki/StudioProjects/smartqr-app/venv/bin/python3
+#!/bin/sh
+'''exec' "/Users/seoki/무제 폴더/smartqr-app/venv/bin/python3.12" "$0" "$@"
+' '''
 # -*- coding: utf-8 -*-
 import re
 import sys

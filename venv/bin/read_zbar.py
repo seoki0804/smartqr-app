@@ -1,4 +1,4 @@
-#!/Users/seoki/StudioProjects/smartqr-app/venv/bin/python3
+#!/Users/seoki/무제 폴더/smartqr-app/venv/bin/python3.12
 from __future__ import print_function
 
 import argparse

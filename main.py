@@ -133,7 +133,7 @@ class InvoiceDialog(QDialog):
         if not ok:
             return
 
-        # 3) 선택된 인덱스로 원본 데이터 가져오기
+        # 3) 선택된 인덱스로 원본 데이터 가져옴
         idx = choices.index(choice)
         name, code = items[idx]
 
