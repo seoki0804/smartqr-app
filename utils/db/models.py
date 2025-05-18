@@ -1,13 +1,18 @@
-
-
-# File: smartqr-app/utils/db/models.py
-
 import sqlite3
 import os
+import sys
 from datetime import datetime
 
-# Database file path in project root
-DB_PATH = os.path.join(os.getcwd(), "data.db")
+def get_database_path():
+    """Return the correct path to data.db, whether frozen or not."""
+    if getattr(sys, 'frozen', False):  # 빌드된 exe 파일일 경우
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")  # 개발 중: 현재 경로 기준
+
+    return os.path.join(base_path, "data.db")
+
+DB_PATH = get_database_path()
 
 def get_connection():
     """Return a new connection to the SQLite database."""
