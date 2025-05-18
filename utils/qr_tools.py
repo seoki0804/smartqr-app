@@ -25,7 +25,7 @@ def scan_qr_from_camera():
             break
 
         # 화면에 카메라 피드 표시
-        cv2.imshow("QR 스캔 (종료: q)", frame)
+        cv2.imshow("QR Scan (Quit: q)", frame)
 
         # pyzbar를 사용해 QR 코드 디코딩 시도
         decoded_objects = pyzbar.decode(frame)

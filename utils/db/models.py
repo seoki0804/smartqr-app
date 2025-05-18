@@ -5,10 +5,10 @@ from datetime import datetime
 
 def get_database_path():
     """Return the correct path to data.db, whether frozen or not."""
-    if getattr(sys, 'frozen', False):  # 빌드된 exe 파일일 경우
+    if getattr(sys, 'frozen', False):  
         base_path = sys._MEIPASS
     else:
-        base_path = os.path.abspath(".")  # 개발 중: 현재 경로 기준
+        base_path = os.path.abspath(".") 
 
     return os.path.join(base_path, "data.db")
 
