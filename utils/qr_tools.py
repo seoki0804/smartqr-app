@@ -1,8 +1,14 @@
 # File: smartqr-app/utils/qr_tools.py
-
+import os
+import sys
 import cv2
 from pyzbar import pyzbar
 import json
+
+
+if getattr(sys, 'frozen', False):  # PyInstaller로 빌드된 실행파일인 경우
+    libs_path = os.path.join(sys._MEIPASS, "libs")
+    os.environ["PATH"] += os.pathsep + libs_path
 
 def scan_qr_from_camera():
     """

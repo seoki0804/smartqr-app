@@ -35,7 +35,7 @@ jobs:
           --add-data "qrcodes;qrcodes" ^
           --add-data "exports;exports" ^
           --add-binary "libs\\libiconv.dll;." ^
-          --add-binary "libs\\libzbar64-0.dll;."
+          --add-binary "libs\\libzbar64.dll;."
 
     - name: Upload EXE
       uses: actions/upload-artifact@v4

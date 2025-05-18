@@ -4,12 +4,13 @@ import os
 import sys
 import json
 import PyQt6
+import platform
 
-# macOS용 Qt 플랫폼 플러그인 경로 지정 (없으면 cocoa 오류)
-os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = os.path.join(
-    os.path.dirname(PyQt6.__file__),
-    "Qt6", "plugins", "platforms"
-)
+if platform.system() == "Darwin":  # macOS
+    os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = os.path.join(
+        os.path.dirname(PyQt6.__file__),
+        "Qt6", "plugins", "platforms"
+    )
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QFormLayout,
