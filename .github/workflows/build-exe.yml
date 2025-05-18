@@ -2,7 +2,10 @@ name: Build Windows EXE
 
 on:
   push:
-    branches: [ main ] 
+    branches: [ main ]
+
+permissions:
+  contents: read
 
 jobs:
   build-windows:
@@ -25,11 +28,7 @@ jobs:
 
     - name: Build EXE with PyInstaller
       run: |
-        pyinstaller --noconfirm --onefile --windowed main.py ^
-          --icon=assets/smartQR.ico ^
-          --add-data "data.db;." ^
-          --add-data "qrcodes;qrcodes" ^
-          --add-data "exports;exports"
+        pyinstaller --noconfirm --onefile --windowed main.py --icon=assets/smartQR.ico --add-data "data.db;." --add-data "qrcodes;qrcodes" --add-data "exports;exports"
 
     - name: Upload EXE
       uses: actions/upload-artifact@v4
