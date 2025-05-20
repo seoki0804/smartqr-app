@@ -1,5 +1,3 @@
-# File: smartqr-app/main.py
-
 import os
 import sys
 import json
@@ -219,6 +217,10 @@ class MainWindow(QMainWindow):
         history_btn.clicked.connect(self.show_request_log)
         form.addRow(history_btn)
 
+        clear_btn = QPushButton("재고 전체 삭제")
+        clear_btn.clicked.connect(self.clear_inventory)
+        form.addRow(clear_btn)
+
         container.setLayout(form)
         self.setCentralWidget(container)
 
@@ -404,6 +406,22 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(table)
         dlg.exec()
+
+    def clear_inventory(self):
+        """inventory 테이블의 모든 데이터를 삭제합니다."""
+        reply = QMessageBox.question(
+            self,
+            "경고",
+            "정말 모든 재고를 삭제하시겠습니까?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM inventory")
+            conn.commit()
+            conn.close()
+            QMessageBox.information(self, "완료", "모든 재고가 삭제되었습니다.")
 
 # 앱 실행 진입점
 if __name__ == "__main__":
